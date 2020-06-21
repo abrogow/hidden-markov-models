@@ -1,0 +1,1 @@
+from licensePlateDB.license_plate_db import LicensePlateDB
