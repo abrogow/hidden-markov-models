@@ -49,8 +49,12 @@ class LicensePlateDB:
         state_sequence, _ = self.viterbi.calculate_optimal_state_sequence(license_plate_idxs)
 
         # Convert back to a string
-        indices_in_alphabet = [self._state_idx_to_character_idx(s) for s in state_sequence]
-        recognized_license_plate = self.convert_to_string_of_characters(indices_in_alphabet)
+        recognized_license_plate = ''
+        state_sequence = state_sequence[1:-1] # Drop start and end markers
+        for state_idx in state_sequence:
+            license_plate_idx = int(state_idx/self.license_plate_number_len)
+            pos = state_idx % self.license_plate_number_len
+            recognized_license_plate += self.license_plates[license_plate_idx][pos]
 
         if recognized_license_plate in self.license_plates:
             self.license_plates.remove(recognized_license_plate)
@@ -64,7 +68,8 @@ class LicensePlateDB:
     def verify_init_params(self):
 
         if self.interference_model.shape[0] != self.interference_model.shape[1]:
-            raise RuntimeError("Interference Model has to be a square matrix")
+            raise RuntimeError("Interference Model has to be a square matrix"
+                               f"(is ({self.interference_model.shape[0], self.interference_model.shape[1]}) instead)")
 
         if self.interference_model.shape[0] != len(self.alphabet):
             raise RuntimeError("Alphabet has to have the same length as Interference Model 1st dimension")
@@ -78,35 +83,22 @@ class LicensePlateDB:
             if license_plate[i] not in self.alphabet:
                 raise RuntimeError("Invalid character in license plate")
 
-    def _character_idx_to_state_idx(self, character_idx, position):
-        return len(self.alphabet) * position + character_idx
-
-    def _state_idx_to_character_idx(self, state_idx):
-        if state_idx >= len(self.alphabet) * self.license_plate_number_len:  # Beginning and end states
-            return state_idx - len(self.alphabet) * (self.license_plate_number_len - 1)
-        else:
-            return state_idx % len(self.alphabet)
-
     def _generate_transition_pd(self, num_of_states):
 
         # Transition Probability Distribution
         transition_pd = np.zeros([num_of_states] * 2, dtype=float)
-        for license_plate in self.license_plates:
-            state_sequence = self.convert_to_idx_vector(license_plate)
+        for license_plate_idx, license_plate in enumerate(self.license_plates):
+            for pos, char in enumerate(license_plate):
+                curr_state_idx = license_plate_idx * self.license_plate_number_len + pos
+                if pos == (len(license_plate) - 1):
+                    transition_pd[curr_state_idx, -1] += 1
+                else:
+                    # Transition from current to next character
+                    transition_pd[curr_state_idx, curr_state_idx + 1] += 1
 
-            # Transition from start state to first character
-            first_chars_state_idx = self._character_idx_to_state_idx(state_sequence[1], 0)
-            transition_pd[-2, first_chars_state_idx] += 1
-
-            # Transition from last character to end state
-            last_chars_state_idx = self._character_idx_to_state_idx(state_sequence[-2], self.license_plate_number_len - 1)
-            transition_pd[last_chars_state_idx, -1] += 1
-
-            # Iterate over remaining transitions (skipping first and last)
-            for i in range(1, len(state_sequence) - 2):
-                char_from_state_idx = self._character_idx_to_state_idx(state_sequence[i], i - 1)
-                char_to_state_idx = self._character_idx_to_state_idx(state_sequence[i + 1], i)
-                transition_pd[char_from_state_idx, char_to_state_idx] += 1
+                    # If first character, add transition from start marker to it
+                    if pos == 0:
+                        transition_pd[-2, curr_state_idx] += 1
 
         # Normalize probabilities in Transition Probability Distribution matrix
         for i in range(0, transition_pd.shape[0]):
@@ -119,9 +111,13 @@ class LicensePlateDB:
     def _generate_observation_pd(self, num_of_states, num_of_observations):
 
         observation_pd = np.zeros([num_of_states, num_of_observations])
-        observation_pd[:-2, :-2] = np.tile(self.interference_model, (self.license_plate_number_len, 1))
         observation_pd[-2, -2] = 1.0  # In the start state we always get beginning marker
         observation_pd[-1, -1] = 1.0  # In the end state we always get end marker
+
+        for license_plate_idx, license_plate in enumerate(self.license_plates):
+            for pos, char in enumerate(license_plate):
+                curr_state_idx = license_plate_idx * self.license_plate_number_len + pos
+                observation_pd[curr_state_idx, :-2] = self.interference_model[self.alphabet.index(char), :]
 
         return observation_pd
 
@@ -134,11 +130,8 @@ class LicensePlateDB:
 
     def _generate_hidden_markov_model(self):
 
-        # Calculate number of states:
-        # at each position we have a state for every character from the alphabet
-        # so we multiply number of characters in the alphabet by the length of the licence plate number.
-        # Then we add two states for beginning and end markers.
-        num_of_states = len(self.alphabet) * self.license_plate_number_len + 2
+        # Calculate number of states
+        num_of_states = len(self.license_plates) * self.license_plate_number_len + 2
 
         # We can observe every character of the alphabet as well as beginning and end markers.
         num_of_observations = len(self.alphabet) + 2
@@ -158,16 +151,3 @@ class LicensePlateDB:
         """
         license_plate = '$' + license_plate + '#'  # Add beginning and end markers
         return [self.extended_alphabet.index(x) for x in license_plate]
-
-    def convert_to_string_of_characters(self, recognized_license_place_idxs):
-        """
-        Function convert vectof of alphabet indexes to recognized license plate string
-        :param recognized_license_place_idxs:
-        :return: recognized_license_plate
-        """
-        recognized_license_plate = ''
-
-        for idx in recognized_license_place_idxs:
-            recognized_license_plate += self.extended_alphabet[idx]
-
-        return recognized_license_plate[1:-1]  # Strip beginning and end markers

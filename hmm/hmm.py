@@ -7,9 +7,11 @@ def verify_probability_distribution(pd):
         raise RuntimeError("Invalid single dimensional probability distribution")
 
     elif len(pd.shape) == 2:
-        for row in pd:
-            if not np.allclose(np.sum(row), 1):
-                raise RuntimeError("Invalid two dimensional probability distribution")
+        for idx, row in enumerate(pd):
+            sum = np.sum(row)
+            if not np.allclose(sum, 1):
+                raise RuntimeError("Invalid two dimensional probability distribution"
+                                   f"(sum of the row numer {idx} is {sum})")
 
 
 class HiddenMarkovModel:
@@ -27,8 +29,8 @@ class HiddenMarkovModel:
         self.verify_shapes()
 
         # verify_probability_distribution(transition_pd)
-        # verify_probability_distribution(observation_pd)
-        # verify_probability_distribution(initial_state_pd)
+        verify_probability_distribution(observation_pd)
+        verify_probability_distribution(initial_state_pd)
 
         self.numOfStates = transition_pd.shape[0]
 
@@ -41,7 +43,8 @@ class HiddenMarkovModel:
             raise RuntimeError("Transition Probability Distribution has to be a matrix")
 
         if self.transition_pd.shape[0] != self.observation_pd.shape[0]:
-            raise RuntimeError("Transition Probability Distribution and Observation Probability Distribution have to have the same length of the 1st dimension")
+            raise RuntimeError("Transition Probability Distribution and Observation Probability Distribution have "
+                               "to have the same length of the 1st dimension")
 
         if self.transition_pd.shape[0] != self.transition_pd.shape[1]:
             raise RuntimeError("Transition Probability Distribution has to be a square matrix")

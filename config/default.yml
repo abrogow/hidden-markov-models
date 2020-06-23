@@ -1,0 +1,19 @@
+# Number of characters in the alphabet
+length_of_the_alphabet: 4
+
+# Length of the license plate number
+length_of_license_plate: 8
+
+# Confusion matrix for the characters from the alphabet
+# nth row defines how often nth character from the alphabet is recognized as mth character
+# (values in the mth column)
+confusion_matrix: [[0.91, 0.03, 0.03, 0.03],
+                   [0.03, 0.91, 0.03, 0.03],
+                   [0.03, 0.03, 0.91, 0.03],
+                   [0.03, 0.03, 0.03, 0.91]]
+
+# Number of random license plates to place in the DB before starting test
+num_of_license_plates_in_db: 50
+
+# Number of randomly generated license plates that are place and then removed from the DB during the test
+num_of_license_plates_to_test: 100
