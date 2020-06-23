@@ -52,6 +52,7 @@ def run_simulation(
     num_of_license_plates_in_db,
     num_of_license_plates_to_test,
 ):
+
     alphabet = [x for x in (string.ascii_uppercase + string.digits)[:m]]
 
     db = lpdb.LicensePlateDB(interference_model, n, alphabet)
@@ -59,10 +60,22 @@ def run_simulation(
     license_plates = []
 
     for i in range(0, num_of_license_plates_in_db):
-        lp = generate_random_license_plate(alphabet, n)
-        license_plates.append(lp)
-        # TODO: Make sure we don't already have it
-        db.add(lp)
+
+        while True:
+            # Add random license plate
+            lp = generate_random_license_plate(alphabet, n)
+            recognized_as = generate_noisy_measurement(lp, alphabet, interference_model)
+
+            # Continue only if this is not a duplicate
+            duplicate_found = False
+            for x in license_plates:
+                if lp == x[0] or recognized_as == x[1]:
+                    duplicate_found = True
+            if not duplicate_found:
+                break
+
+        license_plates.append([lp, recognized_as])
+        db.add(recognized_as)
 
     frr = np.zeros(num_of_license_plates_to_test)
     far = np.zeros(num_of_license_plates_to_test)
@@ -73,19 +86,24 @@ def run_simulation(
 
         # Add random license plate
         lp = generate_random_license_plate(alphabet, n)
-        license_plates.append(lp)
-        db.add(lp)
+        recognized_as = generate_noisy_measurement(lp, alphabet, interference_model)
+        license_plates.append([lp, recognized_as])
+        db.add(recognized_as)
 
         # Choose random license plate to remove
         lp_idx = int(np.random.rand() * len(license_plates))
-        lp = license_plates[lp_idx]
+        lp = license_plates[lp_idx][0]
+        initially_recognized_as = license_plates[lp_idx][1]
 
         # Remove random license plate
         noisy_lp = generate_noisy_measurement(lp, alphabet, interference_model)
         recognized_as, was_rejected = db.remove(noisy_lp)
-        # if was_rejected:
-             # TODO: Retry
-        license_plates.remove(recognized_as)
+
+        to_remove = None
+        for idx, x in enumerate(license_plates):
+            if recognized_as == x[1]:
+                to_remove = idx
+        license_plates.pop(to_remove)
 
         # Update statistics
         if i > 0:
@@ -93,7 +111,7 @@ def run_simulation(
             far[i] = far[i - 1]
         if was_rejected:
             frr[i] += 1
-        if not was_rejected and (lp != recognized_as):
+        if not was_rejected and (initially_recognized_as != recognized_as):
             far[i] += 1
 
     far = far/np.arange(1, len(far) + 1)
