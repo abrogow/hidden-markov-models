@@ -27,9 +27,7 @@ DEFAULT_CFG_PATH = "config/default.yml"
 def parse_args():
     # Parse command line arguments
     parser = argparse.ArgumentParser(
-        prog="License Plate DB tester",
-        # TODO: Add program description
-        description="Description here"
+        prog="License Plate DB tester"
     )
     parser.add_argument("-c", "--config", type=str, default=DEFAULT_CFG_PATH, dest="config_path",
                         help="Path to YAML file with test configuration")
