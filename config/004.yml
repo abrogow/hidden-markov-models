@@ -3,7 +3,7 @@
 length_of_the_alphabet: 4
 
 # Length of the license plate number
-length_of_license_plate: 8
+length_of_license_plate: 14
 
 # Confusion matrix for the characters from the alphabet
 # nth row defines how often nth character from the alphabet is recognized as mth character

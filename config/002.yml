@@ -14,7 +14,7 @@ confusion_matrix: [[0.91, 0.03, 0.03, 0.03],
                    [0.03, 0.03, 0.03, 0.91]]
 
 # Number of random license plates to place in the DB before starting test
-num_of_license_plates_in_db: 50
+num_of_license_plates_in_db: 100
 
 # Number of randomly generated license plates that are place and then removed from the DB during the test
 num_of_license_plates_to_test: 1000

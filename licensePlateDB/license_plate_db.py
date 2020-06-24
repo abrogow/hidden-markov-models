@@ -43,14 +43,14 @@ class LicensePlateDB:
         self.verify_license_plate(license_plate)
 
         # Convert license plate number to list of indices in the alphabet
-        license_plate_idxs = self.convert_to_idx_vector(license_plate)
+        license_plate_idxs = self._convert_to_idx_vector(license_plate)
 
         # Find the most probable sequence of states
         state_sequence, _ = self.viterbi.calculate_optimal_state_sequence(license_plate_idxs)
 
         # Convert back to a string
         recognized_license_plate = ''
-        state_sequence = state_sequence[1:-1] # Drop start and end markers
+        state_sequence = state_sequence[1:-1]  # Drop start and end markers
         for state_idx in state_sequence:
             license_plate_idx = int(state_idx/self.license_plate_number_len)
             pos = state_idx % self.license_plate_number_len
@@ -143,7 +143,7 @@ class LicensePlateDB:
         self.hmm = hmm.HiddenMarkovModel(transition_pd, observation_pd, initial_state_pd)
         self.viterbi = hmm.Viterbi(self.hmm)
 
-    def convert_to_idx_vector(self, license_plate):
+    def _convert_to_idx_vector(self, license_plate):
         """
         Function convert license plate string to vector of alphabet indexes
         :param license_plate:
